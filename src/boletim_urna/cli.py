@@ -42,6 +42,31 @@ def _csv_2026_tem_2o_turno() -> bool:
         return any(linha.decode("latin-1").replace('"', "").split(";")[i] == "2" for linha in f)
 
 
+def _conferir_bu() -> None:
+    """Conferência seção a seção: BUs decodificados × CSV oficial do 2º turno de 2026 no DF."""
+    import duckdb
+
+    from . import bu
+
+    con = duckdb.connect()
+    partes = [
+        f"SELECT * FROM {df_ra._csv(df_ra._extrair(chave, 2026, nome))} WHERE SG_UF = 'DF' AND NR_TURNO = '2'"
+        for chave, nome in (("votacao_secao_df", "votacao_secao_2026_DF.csv"), ("votacao_secao_br", "votacao_secao_2026_BR.csv"))
+    ]
+    csv = con.sql(f"""
+        SELECT NR_ZONA::INT AS nr_zona, NR_SECAO::INT AS nr_secao, CD_CARGO::INT AS cd_cargo,
+               NR_VOTAVEL::INT AS nr_votavel, QT_VOTOS::BIGINT AS qt_votos
+        FROM ({" UNION ALL ".join(partes)})
+    """).df()
+    divergencias = bu.conferir_com_csv(csv)
+    destino = fontes.PROCESSADOS / "conferencia_bu_csv_df_2t_2026.csv"
+    divergencias.to_csv(destino, index=False)
+    if divergencias.empty:
+        typer.echo("Conferência BU × CSV: todas as seções do DF conferem.")
+    else:
+        typer.echo(f"Conferência BU × CSV: {len(divergencias)} divergência(s) — ver {destino.name}")
+
+
 @app.command()
 def atualizar() -> None:
     """Verifica se o TSE já publicou o 2º turno de 2026 em CSV; se sim, rebaixa e reprocessa."""
@@ -55,8 +80,12 @@ def atualizar() -> None:
         return
     typer.echo("2º turno publicado em CSV: rebaixando e reprocessando.")
     _baixar.baixar_munzona(anos=(2026,), forcar=True)
-    for csv in (_processar.TEMP).glob("*2026_BRASIL.csv"):
+    _baixar.baixar_secao(anos=(2026,), forcar=True)
+    for csv in list(_processar.TEMP.glob("*2026_BRASIL.csv")) + list(_processar.TEMP.glob("*2026_D*.csv")) + list(
+        _processar.TEMP.glob("*2026_BR.csv")
+    ):
         csv.unlink()
+    _conferir_bu()
     _processar.processar()
     df_ra.processar()
     unidades.processar()

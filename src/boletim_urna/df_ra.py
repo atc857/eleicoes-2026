@@ -21,7 +21,7 @@ import geopandas as gpd
 import pandas as pd
 import shapely
 
-from . import fontes
+from . import bu, fontes
 from .processar import TEMP
 
 log = logging.getLogger(__name__)
@@ -158,6 +158,12 @@ def _com_ra(df: pd.DataFrame, locais_df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def _marcar_fonte_bu(df: pd.DataFrame, usa_bu: bool) -> pd.DataFrame:
+    if usa_bu:
+        df.loc[(df.ano == 2026) & (df.nr_turno == 2), "fonte"] = f"bu:{bu.PLEITO_2T_2026}"
+    return df
+
+
 def processar(anos=fontes.ANOS) -> None:
     con = duckdb.connect()
     malha = ras()
@@ -170,7 +176,17 @@ def processar(anos=fontes.ANOS) -> None:
     comum = {"sg_uf": "DF", "fonte": "csv:secao"}
     ids = ["ano", "nr_turno", "cd_cargo", "cd_ra"]
 
-    votos = _com_ra(pd.concat([_votos_secao(con, a) for a in anos], ignore_index=True), locais_df)
+    votos_secao = pd.concat([_votos_secao(con, a) for a in anos], ignore_index=True)
+    part_secao = pd.concat([_participacao_secao(con, a) for a in anos], ignore_index=True)
+    # 2º turno de 2026 ainda sem CSV por seção: usa os Boletins de Urna decodificados
+    usa_bu = 2026 in anos and votos_secao.query("ano == 2026 and nr_turno == 2").empty
+    if usa_bu:
+        log.info("2º turno de 2026 sem CSV por seção: decodificando os BUs do DF")
+        v_bu, p_bu = bu.votos_e_participacao_por_secao()
+        votos_secao = pd.concat([votos_secao, v_bu.drop(columns="nr_secao")], ignore_index=True)
+        part_secao = pd.concat([part_secao, p_bu.drop(columns="nr_secao")], ignore_index=True)
+
+    votos = _com_ra(votos_secao, locais_df)
     votos = votos.groupby([*ids, "nr_votavel"], as_index=False).qt_votos.sum()
 
     # Identidade e destino dos votos de cada candidato vêm da tabela municipal do DF:
@@ -208,6 +224,7 @@ def processar(anos=fontes.ANOS) -> None:
     destino[votos.ds_destinacao.fillna("").str.startswith("Anulado")] = "anulado"
 
     nominais = votos[destino == "nominal"].drop(columns="ds_destinacao").assign(**comum)
+    nominais = _marcar_fonte_bu(nominais, usa_bu)
     nominais.to_parquet(fontes.PROCESSADOS / "votos_ra.parquet", index=False)
 
     leg = votos[destino == "legenda"].copy()
@@ -220,7 +237,7 @@ def processar(anos=fontes.ANOS) -> None:
 
     por_destino = votos.assign(destino=destino).pivot_table(index=ids, columns="destino", values="qt_votos", aggfunc="sum")
 
-    part = _com_ra(pd.concat([_participacao_secao(con, a) for a in anos], ignore_index=True), locais_df)
+    part = _com_ra(part_secao, locais_df)
     part = part.groupby(ids)[
         ["qt_aptos", "qt_comparecimento", "qt_abstencoes", "qt_eleitores_secoes_nao_instaladas", "qt_votos_brancos", "qt_votos_nulos"]
     ].sum()
@@ -229,4 +246,5 @@ def processar(anos=fontes.ANOS) -> None:
     part["qt_votos_validos"] = extra.get("nominal", zero) + extra.get("legenda", zero)
     part["qt_votos_nulos"] += extra.get("nulo_tecnico", zero)
     part["qt_votos_anulados"] = extra.get("anulado", zero)
-    part.reset_index().assign(**comum).to_parquet(fontes.PROCESSADOS / "participacao_ra.parquet", index=False)
+    part = _marcar_fonte_bu(part.reset_index().assign(**comum), usa_bu)
+    part.to_parquet(fontes.PROCESSADOS / "participacao_ra.parquet", index=False)

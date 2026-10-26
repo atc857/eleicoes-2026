@@ -64,7 +64,7 @@ Registro das decisões tomadas na sessão de planejamento de 26/10/2026. Inspira
 
 ## Decodificador de boletins (BU) — DF 2º turno 2026
 
-- Especificação ASN.1 oficial (pacote "Formato dos arquivos de BU, RDV e assinatura digital", v2) **baixada manualmente pelo usuário** em `vendor/tse/` (o site do TSE bloqueia download automatizado); hash registrado.
+- Especificação ASN.1 v2 em `vendor/tse/bu_v2.asn1`. O zip oficial não pôde ser obtido (site do TSE bloqueia download automatizado e o usuário não tinha cópia); veio de duas cópias públicas idênticas, ver `vendor/tse/PROVENIENCIA.md`. A v1 (2022) não decodifica os BUs de 2026.
 - Download educado (concorrência baixa, cache em disco, nunca baixa duas vezes).
 - Conferência: decodifica sem erro; seção/zona do BU = URL; **soma dos BUs = total DF da API, voto a voto** (Presidente e Governador). Assinatura digital fora do escopo.
 - Permanece como verificação seção a seção contra o CSV oficial quando este sair.
@@ -95,3 +95,7 @@ Registro das decisões tomadas na sessão de planejamento de 26/10/2026. Inspira
 - Unidades: `*_unidade.parquet` têm o DF inteiro (tipo "df") e as RAs (tipo "ra"); `sem_duplicar_df`
   escolhe RA quando há dado por seção; a comparação usa RA só nos turnos em que os dois anos têm RA
   (até a etapa 4, o 2º turno do DF é comparado com o DF inteiro).
+- BUs do DF (2º turno 2026): 6.969 seções principais baixadas e decodificadas; a soma confere voto a voto
+  com a totalização oficial (Presidente e Governador). Linhas com `fonte = bu:3221`.
+- `atualizar`, quando o CSV oficial do 2º turno sair: troca API/BU pelo CSV e grava
+  `conferencia_bu_csv_df_2t_2026.csv` com as divergências seção a seção (vazio = tudo confere).
