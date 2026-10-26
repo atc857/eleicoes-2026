@@ -1,0 +1,58 @@
+"""Linha de comando: `boletim-urna baixar | processar | atualizar`."""
+
+import logging
+import zipfile
+
+import typer
+
+from . import baixar as _baixar
+from . import fontes, processar as _processar
+
+app = typer.Typer(help="Pipeline de resultados eleitorais 2022 × 2026 (TSE).", no_args_is_help=True)
+
+
+@app.callback()
+def _config(verbose: bool = typer.Option(False, "--verbose", "-v")) -> None:
+    logging.basicConfig(level=logging.INFO if verbose else logging.WARNING, format="%(asctime)s %(message)s")
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+
+
+@app.command()
+def baixar(forcar: bool = typer.Option(False, help="Baixa de novo mesmo se já existir.")) -> None:
+    """Baixa os arquivos do TSE Dados Abertos (nível município/zona)."""
+    for caminho in _baixar.baixar_munzona(forcar=forcar):
+        typer.echo(caminho.relative_to(fontes.RAIZ))
+
+
+@app.command()
+def processar() -> None:
+    """Gera os Parquets em data/processed/ (completa o 2º turno de 2026 pela API se faltar no CSV)."""
+    _processar.processar()
+    typer.echo("ok")
+
+
+def _csv_2026_tem_2o_turno() -> bool:
+    caminho = fontes.caminho_bruto("detalhe_votacao_munzona", 2026)
+    with zipfile.ZipFile(caminho) as z, z.open("detalhe_votacao_munzona_2026_BR.csv") as f:
+        cabecalho = f.readline().decode("latin-1").replace('"', "").strip().split(";")
+        i = cabecalho.index("NR_TURNO")
+        return any(linha.decode("latin-1").replace('"', "").split(";")[i] == "2" for linha in f)
+
+
+@app.command()
+def atualizar() -> None:
+    """Verifica se o TSE já publicou o 2º turno de 2026 em CSV; se sim, rebaixa e reprocessa."""
+    _baixar.baixar_arquivo(
+        fontes.url_odsele("detalhe_votacao_munzona", 2026),
+        fontes.caminho_bruto("detalhe_votacao_munzona", 2026),
+        forcar=True,
+    )
+    if not _csv_2026_tem_2o_turno():
+        typer.echo("O CSV oficial de 2026 ainda não tem o 2º turno; mantendo dados da API.")
+        return
+    typer.echo("2º turno publicado em CSV: rebaixando e reprocessando.")
+    _baixar.baixar_munzona(anos=(2026,), forcar=True)
+    for csv in (_processar.TEMP).glob("*2026_BRASIL.csv"):
+        csv.unlink()
+    _processar.processar()
+    typer.echo("ok — rode `uv run pytest` para conferir os totais.")

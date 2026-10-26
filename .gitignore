@@ -1,0 +1,5 @@
+data/
+.venv/
+__pycache__/
+*.part
+vendor/tse/*.zip
