@@ -110,6 +110,29 @@ def _estilo_mapa() -> dict:
     return {"version": 8, "sources": {}, "layers": [{"id": "fundo", "type": "background", "paint": {"background-color": fundo}}]}
 
 
+def _camada_sem_dado(df: pd.DataFrame) -> go.Choroplethmap | None:
+    """Unidades do recorte sem linha em `df` (ex.: RA sem local de votação) em cinza, para não virar buraco."""
+    u = dados.unidades()
+    u = u[u.sg_uf.isin(df.sg_uf.unique()) & u.id_geo.notna()]
+    tipos = set(df.tipo) if "tipo" in df else {"municipio"}
+    u = u[u.tipo != ("df" if "ra" in tipos else "ra")]  # nunca DF inteiro sob as RAs (ou vice-versa)
+    faltam = u[~u.id_geo.isin(df.id_geo)]
+    if faltam.empty:
+        return None
+    return go.Choroplethmap(
+        geojson=dados.geo_unidades(),
+        locations=faltam.id_geo,
+        z=np.zeros(len(faltam)),
+        colorscale=[[0, COR_SEM_DADO], [1, COR_SEM_DADO]],
+        showscale=False,
+        marker_line_width=0.2,
+        marker_line_color="rgba(128,128,128,0.35)",
+        text="<b>" + faltam.nm_unidade.str.title() + " / " + faltam.sg_uf + "</b><br>sem dado (sem local de votação ou sem par)",
+        hovertemplate="%{text}<extra></extra>",
+        name="Sem dado",
+    )
+
+
 def mapa(
     df: pd.DataFrame,
     valor: str,
@@ -119,12 +142,15 @@ def mapa(
     hover: pd.Series,
     altura: int = 620,
 ) -> go.Figure:
-    """Coroplético por município (WebGL). `df` precisa de `cd_municipio_ibge`; exterior fica de fora."""
-    df = df[df.cd_municipio_ibge.notna()]
-    fig = go.Figure(
+    """Coroplético por unidade (WebGL). `df` precisa de `id_geo`; exterior fica de fora."""
+    df = df[df.id_geo.notna()]
+    fig = go.Figure()
+    if (sem_dado := _camada_sem_dado(df)) is not None:
+        fig.add_trace(sem_dado)
+    fig.add_trace(
         go.Choroplethmap(
-            geojson=dados.geo_municipios(),
-            locations=df.cd_municipio_ibge,
+            geojson=dados.geo_unidades(),
+            locations=df.id_geo,
             z=df[valor],
             zmin=faixa[0],
             zmax=faixa[1],
@@ -137,7 +163,7 @@ def mapa(
         )
     )
     fig.update_layout(
-        map={"style": _estilo_mapa(), **_enquadrar(df.cd_municipio_ibge, altura)},
+        map={"style": _estilo_mapa(), **_enquadrar(df.id_geo, altura)},
         margin={"l": 0, "r": 0, "t": 0, "b": 0},
         height=altura,
     )
@@ -146,16 +172,18 @@ def mapa(
 
 def mapa_categorico(df: pd.DataFrame, coluna: str, cores: dict[str, str], hover: pd.Series, altura: int = 620) -> go.Figure:
     """Um traço por categoria, para que a legenda mostre cada uma (identidade não só pela cor)."""
-    df = df[df.cd_municipio_ibge.notna()]
+    df = df[df.id_geo.notna()]
     fig = go.Figure()
+    if (sem_dado := _camada_sem_dado(df)) is not None:
+        fig.add_trace(sem_dado)
     for categoria, cor in cores.items():
         parte = df[df[coluna] == categoria]
         if parte.empty:
             continue
         fig.add_trace(
             go.Choroplethmap(
-                geojson=dados.geo_municipios(),
-                locations=parte.cd_municipio_ibge,
+                geojson=dados.geo_unidades(),
+                locations=parte.id_geo,
                 z=np.ones(len(parte)),
                 colorscale=[[0, cor], [1, cor]],
                 showscale=False,
@@ -168,7 +196,7 @@ def mapa_categorico(df: pd.DataFrame, coluna: str, cores: dict[str, str], hover:
             )
         )
     fig.update_layout(
-        map={"style": _estilo_mapa(), **_enquadrar(df.cd_municipio_ibge, altura)},
+        map={"style": _estilo_mapa(), **_enquadrar(df.id_geo, altura)},
         margin={"l": 0, "r": 0, "t": 0, "b": 0},
         height=altura,
         legend={"orientation": "h", "y": 1.02, "x": 0},
@@ -178,7 +206,7 @@ def mapa_categorico(df: pd.DataFrame, coluna: str, cores: dict[str, str], hover:
 
 def hover_municipio(df: pd.DataFrame, linhas: dict[str, pd.Series]) -> pd.Series:
     """Texto do tooltip: nome/UF em negrito + linhas `rótulo: valor` já formatadas."""
-    texto = "<b>" + df.nm_municipio.fillna("?").str.title() + " / " + df.sg_uf + "</b>"
+    texto = "<b>" + df.nm_unidade.fillna("?").str.title() + " / " + df.sg_uf + "</b>"
     for rotulo, serie in linhas.items():
         texto = texto + f"<br>{rotulo}: " + serie.astype(str)
     return texto

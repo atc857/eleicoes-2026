@@ -4,26 +4,36 @@ import streamlit as st
 from boletim_urna import fontes
 from boletim_urna.painel import dados, visual as vz
 
-st.title("Ficha do município")
+st.title("Ficha do município / RA")
 
-mun = dados.municipios().copy()
-mun["rotulo"] = mun.nm_municipio.str.title() + " / " + mun.sg_uf.replace({"ZZ": "Exterior"})
+mun = dados.unidades().copy()
+mun["rotulo"] = (
+    mun.nm_unidade.str.title()
+    + mun.tipo.map({"ra": " (RA)"}).fillna("")
+    + " / "
+    + mun.sg_uf.replace({"ZZ": "Exterior"})
+)
 mun = mun.sort_values("rotulo")
-opcoes = dict(zip(mun.rotulo, mun.cd_municipio))
-padrao = list(opcoes).index("Brasília / DF") if "Brasília / DF" in opcoes else 0
-escolha = st.selectbox("Município", list(opcoes), index=padrao, key="fi_mun")
+opcoes = dict(zip(mun.rotulo, mun.cd_unidade))
+padrao = list(opcoes).index("Plano Piloto (RA) / DF") if "Plano Piloto (RA) / DF" in opcoes else 0
+escolha = st.selectbox("Município ou Região Administrativa", list(opcoes), index=padrao, key="fi_mun")
 cd = opcoes[escolha]
 
-votos = dados.votos_municipio(cd)
-part = dados.participacao_municipio(cd)
+votos = dados.votos_unidade(cd)
+part = dados.participacao_unidade(cd)
 cmp = dados.comparacao_presidente()
-cmp = cmp[cmp.cd_municipio == cd]
+cmp = cmp[cmp.cd_unidade == cd]
 
 # --- Presidente: 2022 × 2026 --------------------------------------------------
 st.header("Presidente")
 for turno in (1, 2):
     linha = cmp[cmp.nr_turno == turno]
     if linha.empty:
+        if cd.startswith("DF-RA") or cd == "97012":
+            st.caption(
+                f"{turno}º turno: a comparação no DF usa "
+                + ("o DF inteiro (o 2º turno de 2026 ainda não tem dado por seção)." if cd.startswith("DF-RA") else "as RAs; escolha uma RA.")
+            )
         continue
     r = linha.iloc[0]
     st.subheader(f"{turno}º turno")

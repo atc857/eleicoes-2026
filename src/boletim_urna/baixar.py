@@ -36,3 +36,11 @@ def baixar_munzona(anos=fontes.ANOS, forcar: bool = False) -> list[Path]:
                 baixar_arquivo(fontes.url_odsele(dataset, ano), fontes.caminho_bruto(dataset, ano), forcar)
             )
     return caminhos
+
+
+def baixar_secao(anos=fontes.ANOS, forcar: bool = False) -> list[Path]:
+    caminhos = [baixar_arquivo(fontes.URL_RAS_DF, fontes.BRUTOS / "df" / "regioes_administrativas.geojson", forcar)]
+    for ano in anos:
+        for chave in fontes.DATASETS_SECAO:
+            caminhos.append(baixar_arquivo(fontes.url_secao(chave, ano), fontes.caminho_secao(chave, ano), forcar))
+    return caminhos

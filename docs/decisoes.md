@@ -87,3 +87,11 @@ Registro das decisões tomadas na sessão de planejamento de 26/10/2026. Inspira
 - A malha IBGE v3 ainda não tem Boa Esperança do Norte (MT, 5101837): aparece nas tabelas, não no mapa.
 - Localidades sem votos válidos (exterior) ficam sem vencedor; topo empatado = "EMPATE".
 - Senador 2026: duas vagas, dois votos por eleitor (votos > comparecimento é esperado).
+- DF por RA: soma das RAs confere voto a voto com o total do DF (candidatos, legenda, participação).
+  Votos do arquivo de seção são classificados pelo destino do TSE: "Válido" (nominal), "Válido (legenda)"
+  (soma na legenda), "Anulado"/"Anulado sub judice" (coluna qt_votos_anulados, fora de nulos e válidos);
+  número ausente da lista de candidatos = nulo técnico (soma aos nulos).
+- RA 36 (26 de Setembro) não tem local de votação: aparece em cinza ("sem dado").
+- Unidades: `*_unidade.parquet` têm o DF inteiro (tipo "df") e as RAs (tipo "ra"); `sem_duplicar_df`
+  escolhe RA quando há dado por seção; a comparação usa RA só nos turnos em que os dois anos têm RA
+  (até a etapa 4, o 2º turno do DF é comparado com o DF inteiro).

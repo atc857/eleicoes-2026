@@ -49,6 +49,9 @@ def votos_candidato_csv(con: duckdb.DuckDBPyConnection, ano: int) -> pd.DataFram
                NM_URNA_CANDIDATO AS nm_votavel, SG_PARTIDO AS sg_partido,
                DS_COMPOSICAO_COLIGACAO AS ds_coligacao, DS_SIT_TOT_TURNO AS ds_situacao,
                sum(QT_VOTOS_NOMINAIS_VALIDOS::BIGINT)::BIGINT AS qt_votos,
+               sum(QT_VOTOS_NOMINAIS::BIGINT)::BIGINT AS qt_votos_nominais,
+               -- Válido / Válido (legenda) / Anulado / Anulado sub judice (uma por candidato)
+               any_value(NM_TIPO_DESTINACAO_VOTOS) AS ds_destinacao,
                'csv' AS fonte
         FROM {fonte}
         GROUP BY ALL
@@ -81,6 +84,7 @@ def participacao_csv(con: duckdb.DuckDBPyConnection, ano: int) -> pd.DataFrame:
                sum(QT_TOTAL_VOTOS_VALIDOS::BIGINT)::BIGINT AS qt_votos_validos,
                sum(QT_VOTOS_BRANCOS::BIGINT)::BIGINT AS qt_votos_brancos,
                sum(QT_TOTAL_VOTOS_NULOS::BIGINT)::BIGINT AS qt_votos_nulos,
+               sum(QT_TOTAL_VOTOS_ANULADOS::BIGINT + QT_TOTAL_VOTOS_ANUL_SUBJUD::BIGINT)::BIGINT AS qt_votos_anulados,
                'csv' AS fonte
         FROM {fonte}
         GROUP BY ALL

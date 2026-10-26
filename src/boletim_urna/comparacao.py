@@ -1,4 +1,4 @@
-"""Comparação 2022 × 2026 de Presidente por município (e, depois, por RA no DF).
+"""Comparação 2022 × 2026 de Presidente por unidade (município; RA no DF onde há dado por seção).
 
 Gera data/processed/comparacao_presidente.parquet: uma linha por (unidade, turno),
 com indicadores de cada ano (sufixos _2022/_2026) e as diferenças (prefixo d_).
@@ -9,7 +9,7 @@ brancos e nulos sobre comparecimento. Diferenças em pontos percentuais.
 import pandas as pd
 import yaml
 
-from . import fontes
+from . import fontes, unidades
 
 CONFIG_BLOCOS = fontes.RAIZ / "config" / "blocos.yaml"
 PARTIDOS_PRINCIPAIS = ("PT", "PL")
@@ -24,7 +24,7 @@ def carregar_blocos() -> tuple[dict[int, dict[int, str]], dict[str, str]]:
     return por_ano, rotulos
 
 
-def indicadores_por_ano(votos: pd.DataFrame, participacao: pd.DataFrame, chave: str = "cd_municipio") -> pd.DataFrame:
+def indicadores_por_ano(votos: pd.DataFrame, participacao: pd.DataFrame, chave: str = "cd_unidade") -> pd.DataFrame:
     """Indicadores de Presidente por (ano, turno, unidade). `votos`/`participacao` já filtrados em cd_cargo == 1."""
     blocos, _ = carregar_blocos()
     v = votos.copy()
@@ -69,7 +69,7 @@ def indicadores_por_ano(votos: pd.DataFrame, participacao: pd.DataFrame, chave: 
     return df.reset_index()
 
 
-def comparar(ind: pd.DataFrame, chave: str = "cd_municipio") -> pd.DataFrame:
+def comparar(ind: pd.DataFrame, chave: str = "cd_unidade") -> pd.DataFrame:
     """Une 2022 e 2026 por (unidade, turno) e calcula as diferenças."""
     a, b = (ind[ind.ano == ano].drop(columns="ano") for ano in fontes.ANOS)
     df = a.merge(b, on=["nr_turno", "sg_uf", chave], how="outer", suffixes=("_2022", "_2026"))
@@ -92,11 +92,11 @@ def comparar(ind: pd.DataFrame, chave: str = "cd_municipio") -> pd.DataFrame:
 
 def processar() -> pd.DataFrame:
     filtro = [("cd_cargo", "==", 1)]
-    votos = pd.read_parquet(fontes.PROCESSADOS / "votos_municipio.parquet", filters=filtro)
-    participacao = pd.read_parquet(fontes.PROCESSADOS / "participacao_municipio.parquet", filters=filtro)
-    municipios = pd.read_parquet(fontes.PROCESSADOS / "municipios.parquet")
+    votos = unidades.df_comparavel(pd.read_parquet(fontes.PROCESSADOS / "votos_unidade.parquet", filters=filtro))
+    participacao = unidades.df_comparavel(pd.read_parquet(fontes.PROCESSADOS / "participacao_unidade.parquet", filters=filtro))
+    lista = pd.read_parquet(fontes.PROCESSADOS / "unidades.parquet")
 
     df = comparar(indicadores_por_ano(votos, participacao))
-    df = df.merge(municipios[["cd_municipio", "cd_municipio_ibge", "nm_municipio"]], on="cd_municipio", how="left")
+    df = df.merge(lista[["cd_unidade", "nm_unidade", "id_geo", "tipo"]], on="cd_unidade", how="left")
     df.to_parquet(fontes.PROCESSADOS / "comparacao_presidente.parquet", index=False)
     return df

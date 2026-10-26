@@ -100,10 +100,10 @@ if uf == "Brasil":
     t["sg_uf"] = t.sg_uf.replace({"ZZ": "Exterior"})
     tabela = t.rename(columns={"sg_uf": "UF"})
 else:
-    st.subheader("Por município" if uf != "ZZ" else "Por cidade")
-    tabela = sel[["nm_municipio", "qt_validos", "pct_pt", "pct_pl", "vencedor_nome", "margem_pp", "pct_abstencao"]].rename(
+    st.subheader({"ZZ": "Por cidade", "DF": "Por Região Administrativa"}.get(uf, "Por município"))
+    tabela = sel[["nm_unidade", "qt_validos", "pct_pt", "pct_pl", "vencedor_nome", "margem_pp", "pct_abstencao"]].rename(
         columns={
-            "nm_municipio": "Município",
+            "nm_unidade": "Município / RA",
             "qt_validos": "Válidos",
             "pct_pt": "% PT",
             "pct_pl": "% PL",

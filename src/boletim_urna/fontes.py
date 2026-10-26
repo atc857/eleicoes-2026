@@ -45,3 +45,31 @@ def url_odsele(dataset: str, ano: int) -> str:
 
 def caminho_bruto(dataset: str, ano: int) -> Path:
     return BRUTOS / dataset / DATASETS_MUNZONA[dataset].format(ano=ano)
+
+
+# Nível de seção, usado só para dividir o DF em Regiões Administrativas.
+# Presidente não está no arquivo _DF: vem do _BR (só Presidente, todas as UFs), filtrado.
+DATASETS_SECAO = {
+    "votacao_secao_df": ("votacao_secao", "votacao_secao_{ano}_DF.zip"),
+    "votacao_secao_br": ("votacao_secao", "votacao_secao_{ano}_BR.zip"),
+    "detalhe_votacao_secao": ("detalhe_votacao_secao", "detalhe_votacao_secao_{ano}.zip"),
+    "eleitorado_local_votacao": ("eleitorado_locais_votacao", "eleitorado_local_votacao_{ano}.zip"),
+}
+
+# Malha oficial das RAs do DF (IDE-DF / SEDUH), já em EPSG:4326.
+URL_RAS_DF = (
+    "https://www.geoservicos.ide.df.gov.br/arcgis/rest/services/Publico/LIMITES/MapServer/1/query"
+    "?where=1%3D1&outFields=ra_cira,ra_nome,ra_codigo&outSR=4326&f=geojson"
+)
+CD_MUNICIPIO_DF = "97012"
+CD_IBGE_DF = "5300108"
+
+
+def url_secao(chave: str, ano: int) -> str:
+    pasta, arquivo = DATASETS_SECAO[chave]
+    return f"{CDN_ODSELE}/{pasta}/{arquivo.format(ano=ano)}"
+
+
+def caminho_secao(chave: str, ano: int) -> Path:
+    pasta, arquivo = DATASETS_SECAO[chave]
+    return BRUTOS / pasta / arquivo.format(ano=ano)

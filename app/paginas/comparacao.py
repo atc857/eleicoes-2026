@@ -26,7 +26,7 @@ comparaveis = sel[~sel.sem_comparacao]
 pt_pl = (comparaveis.vencedor_partido_2022 == "PT") & (comparaveis.vencedor_partido_2026 == "PL")
 pl_pt = (comparaveis.vencedor_partido_2022 == "PL") & (comparaveis.vencedor_partido_2026 == "PT")
 k = st.columns(4)
-k[0].metric("Municípios comparáveis", vz.fmt_int(len(comparaveis)))
+k[0].metric("Unidades comparáveis", vz.fmt_int(len(comparaveis)))
 k[1].metric("Viraram PT → PL", vz.fmt_int(pt_pl.sum()))
 k[2].metric("Viraram PL → PT", vz.fmt_int(pl_pt.sum()))
 k[3].metric(f"Mediana da variação — {rotulo}", vz.fmt_pp(comparaveis[d].median()))
@@ -79,7 +79,7 @@ else:
 # --- dispersão 2022 × 2026 ----------------------------------------------------
 esq, dir_ = st.columns(2)
 with esq:
-    st.subheader("2022 × 2026, município a município")
+    st.subheader("2022 × 2026, unidade a unidade")
     st.caption("Acima da diagonal, a métrica cresceu. Tamanho do ponto ∝ eleitorado apto em 2026.")
     pts = comparaveis[comparaveis.qt_aptos_2026 > 0]
     cor = vz.COR_PARTIDO["PT"] if lado == "pt" else vz.COR_PARTIDO["PL"] if lado == "pl" else vz.ROXO[2]
@@ -115,7 +115,7 @@ with dir_:
     minimo = st.number_input("Eleitorado apto mínimo (2026)", 0, 1_000_000, 5_000, step=1_000, key="cp_min")
     base = comparaveis[comparaveis.qt_aptos_2026 >= minimo]
     colunas = {
-        "nm_municipio": "Município",
+        "nm_unidade": "Município / RA",
         "sg_uf": "UF",
         f"{metrica}_2022": "2022",
         f"{metrica}_2026": "2026",
@@ -130,14 +130,14 @@ with dir_:
     b.dataframe(base.nsmallest(20, d)[list(colunas)].rename(columns=colunas), hide_index=True, column_config=fmt)
 
 # --- viradas ------------------------------------------------------------------
-st.subheader("Municípios que mudaram de vencedor")
+st.subheader("Municípios e RAs que mudaram de vencedor")
 vir = sel[sel.virou].sort_values("qt_aptos_2026", ascending=False)
 st.dataframe(
     vir[
-        ["nm_municipio", "sg_uf", "vencedor_nome_2022", "margem_pp_2022", "vencedor_nome_2026", "margem_pp_2026", "virada_apertada", "qt_aptos_2026"]
+        ["nm_unidade", "sg_uf", "vencedor_nome_2022", "margem_pp_2022", "vencedor_nome_2026", "margem_pp_2026", "virada_apertada", "qt_aptos_2026"]
     ].rename(
         columns={
-            "nm_municipio": "Município",
+            "nm_unidade": "Município / RA",
             "sg_uf": "UF",
             "vencedor_nome_2022": "Vencedor 2022",
             "margem_pp_2022": "Margem 2022 (pp)",
@@ -159,5 +159,5 @@ st.dataframe(
 sem = sel[sel.sem_comparacao]
 if len(sem):
     with st.expander(f"{len(sem)} localidade(s) sem comparação"):
-        st.write(", ".join((sem.nm_municipio.fillna(sem.cd_municipio).str.title() + "/" + sem.sg_uf).tolist()))
+        st.write(", ".join((sem.nm_unidade.fillna(sem.cd_unidade).str.title() + "/" + sem.sg_uf).tolist()))
         st.caption("Boa Esperança do Norte (MT) foi criado após 2022 e ainda não está na malha do IBGE; no exterior, cidades que deixaram ou passaram a ter seção.")

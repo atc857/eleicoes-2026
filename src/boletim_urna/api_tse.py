@@ -92,6 +92,8 @@ def _linhas_resultado(dados: dict, ele: int, sg_uf: str, cd_municipio: str):
                             "ds_coligacao": agr["com"],
                             "ds_situacao": cand["st"].upper(),
                             "qt_votos": _int(cand.get("vap")),
+                            "qt_votos_nominais": _int(cand.get("vap")),
+                            "ds_destinacao": cand.get("dvt"),
                             "cd_cargo": cd_cargo,
                         }
                     )
@@ -105,6 +107,7 @@ def _linhas_resultado(dados: dict, ele: int, sg_uf: str, cd_municipio: str):
             "qt_votos_validos": _int(v["vv"]),
             "qt_votos_brancos": _int(v["vb"]),
             "qt_votos_nulos": _int(v["tvn"]),
+            "qt_votos_anulados": _int(v.get("van")) + _int(v.get("vansj")),
             "cd_cargo": int(dados["carg"][0]["cd"]),
         }
     )
