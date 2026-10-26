@@ -80,3 +80,10 @@ Registro das decisões tomadas na sessão de planejamento de 26/10/2026. Inspira
 3. DF por RA
 4. Decodificador de BU (DF 2ºt 2026)
 5. Outros cargos e exterior (páginas 4–5)
+
+## Notas de implementação
+
+- Mapas sem mapa de fundo (só a superfície do tema): com tiles, países vizinhos claros pareciam "sem dado".
+- A malha IBGE v3 ainda não tem Boa Esperança do Norte (MT, 5101837): aparece nas tabelas, não no mapa.
+- Localidades sem votos válidos (exterior) ficam sem vencedor; topo empatado = "EMPATE".
+- Senador 2026: duas vagas, dois votos por eleitor (votos > comparecimento é esperado).

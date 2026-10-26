@@ -87,9 +87,21 @@ def participacao_csv(con: duckdb.DuckDBPyConnection, ano: int) -> pd.DataFrame:
     """).df()
 
 
-def municipios() -> pd.DataFrame:
-    """De-para TSE → IBGE a partir do config da API 2026 (1º turno federal lista todos os municípios)."""
-    return api_tse.municipios(fontes.ELEICAO_2026[("federal", 1)])
+def municipios(con: duckdb.DuckDBPyConnection, anos=fontes.ANOS) -> pd.DataFrame:
+    """De-para TSE → IBGE a partir do config da API 2026 (1º turno federal lista todos os municípios).
+
+    Localidades que só existem nos CSVs (cidades do exterior que deixaram de ter seção) entram
+    com o nome do CSV e sem código IBGE.
+    """
+    api = api_tse.municipios(fontes.ELEICAO_2026[("federal", 1)])
+    consultas = " UNION ".join(
+        f"SELECT DISTINCT SG_UF AS sg_uf, lpad(CD_MUNICIPIO, 5, '0') AS cd_municipio, NM_MUNICIPIO AS nm_municipio "
+        f"FROM {_ler_csv(_extrair_brasil('detalhe_votacao_munzona', ano))}"
+        for ano in anos
+    )
+    csv = con.sql(consultas).df().drop_duplicates("cd_municipio")
+    extras = csv[~csv.cd_municipio.isin(api.cd_municipio)]
+    return pd.concat([api, extras], ignore_index=True)
 
 
 def _falta_turno(df: pd.DataFrame, ano: int, turno: int) -> bool:
@@ -117,7 +129,7 @@ def processar(anos=fontes.ANOS) -> None:
     participacao = pd.concat([participacao_csv(con, a) for a in anos], ignore_index=True)
     votos, participacao = _completar_com_api(votos, participacao)
 
-    municipios().to_parquet(fontes.PROCESSADOS / "municipios.parquet", index=False)
+    municipios(con, anos).to_parquet(fontes.PROCESSADOS / "municipios.parquet", index=False)
     votos.to_parquet(fontes.PROCESSADOS / "votos_municipio.parquet", index=False)
     partido.to_parquet(fontes.PROCESSADOS / "votos_partido_municipio.parquet", index=False)
     participacao.to_parquet(fontes.PROCESSADOS / "participacao_municipio.parquet", index=False)

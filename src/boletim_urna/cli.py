@@ -6,7 +6,7 @@ import zipfile
 import typer
 
 from . import baixar as _baixar
-from . import fontes, processar as _processar
+from . import comparacao, fontes, processar as _processar
 
 app = typer.Typer(help="Pipeline de resultados eleitorais 2022 × 2026 (TSE).", no_args_is_help=True)
 
@@ -28,6 +28,7 @@ def baixar(forcar: bool = typer.Option(False, help="Baixa de novo mesmo se já e
 def processar() -> None:
     """Gera os Parquets em data/processed/ (completa o 2º turno de 2026 pela API se faltar no CSV)."""
     _processar.processar()
+    comparacao.processar()
     typer.echo("ok")
 
 
@@ -55,4 +56,21 @@ def atualizar() -> None:
     for csv in (_processar.TEMP).glob("*2026_BRASIL.csv"):
         csv.unlink()
     _processar.processar()
+    comparacao.processar()
     typer.echo("ok — rode `uv run pytest` para conferir os totais.")
+
+
+@app.command()
+def comparar() -> None:
+    """Gera a comparação 2022 × 2026 de Presidente (data/processed/comparacao_presidente.parquet)."""
+    comparacao.processar()
+    typer.echo("ok")
+
+
+@app.command()
+def painel() -> None:
+    """Abre o painel Streamlit."""
+    import subprocess
+    import sys
+
+    subprocess.run([sys.executable, "-m", "streamlit", "run", str(fontes.RAIZ / "app" / "painel.py")], check=False)

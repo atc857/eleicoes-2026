@@ -1,0 +1,20 @@
+# Blocos políticos para a comparação de Presidente, por número na urna (NR_VOTAVEL).
+# Versão inicial montada a partir das coligações registradas no TSE:
+#   2022: Lula (13) — Brasil da Esperança (PT/PCdoB/PV, PSOL/REDE, PSB, Solidariedade, Agir, Avante, PROS)
+#         Bolsonaro (22) — PP / Republicanos / PL
+#   2026: Lula (13) — PSB / PDT / Brasil da Esperança (PT/PCdoB/PV) / PSOL-REDE
+#         Flávio Bolsonaro (22) — PL isolado
+# Candidatos não listados caem em "demais". Edite à vontade e rode `boletim-urna processar`.
+
+rotulos:
+  campo_lula: Campo Lula/PT
+  campo_bolsonarista: Campo bolsonarista/PL
+  demais: Demais
+
+2022:
+  campo_lula: [13]
+  campo_bolsonarista: [22]
+
+2026:
+  campo_lula: [13]
+  campo_bolsonarista: [22]
