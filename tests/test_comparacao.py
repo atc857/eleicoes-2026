@@ -32,4 +32,4 @@ def test_virada_coerente(cmp):
 
 def test_todo_municipio_brasileiro_tem_par_exceto_os_novos(cmp):
     sem = cmp[cmp.sem_comparacao & (cmp.sg_uf != "ZZ")]
-    assert set(sem.cd_municipio) == {"73709"}  # Boa Esperança do Norte (MT), criado após 2022
+    assert set(sem.cd_unidade) == {"73709"}  # Boa Esperança do Norte (MT), criado após 2022
