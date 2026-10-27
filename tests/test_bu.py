@@ -23,7 +23,7 @@ def test_bu_decodificado_identifica_a_propria_secao():
     caminho = bu.CACHE / "z0001" / "s0001-bu.dat"
     if not caminho.exists():
         pytest.skip("BU de exemplo não baixado")
-    votos, participacao = bu._linhas(bu.decodificar(caminho), 1, 1)
+    votos, _participacao = bu._linhas(bu.decodificar(caminho), 1, 1)
     assert {v["cd_cargo"] for v in votos} == {1, 3}
     with pytest.raises(ValueError):
         bu._linhas(bu.decodificar(caminho), 1, 2)

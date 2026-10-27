@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Boletim Urna 2022 × 2026</title>
+  <meta name="description" content="Resultados eleitorais de 2022 e 2026 por município e Região Administrativa do DF, todos os cargos (TSE).">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="estilo.css">
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" defer></script>
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header class="barra">
+    <h1>Boletim Urna <span>2022 × 2026</span></h1>
+    <div class="grupo vistas" data-campo="v" role="group" aria-label="Vista">
+      <button data-v="r">Resultados</button><button data-v="c">Comparação 2022 × 2026</button>
+    </div>
+    <div class="controles">
+      <select id="cargo" class="so-resultados" aria-label="Cargo"></select>
+      <div class="grupo so-resultados" data-campo="ano" role="group" aria-label="Ano">
+        <button data-v="2022">2022</button><button data-v="2026">2026</button>
+      </div>
+      <div class="grupo" data-campo="turno" role="group" aria-label="Turno">
+        <button data-v="1">1º turno</button><button data-v="2">2º turno</button>
+      </div>
+      <select id="uf" aria-label="Recorte"></select>
+      <div class="busca">
+        <input id="busca" type="search" placeholder="Buscar município ou RA…" autocomplete="off" aria-label="Buscar município ou RA">
+        <ul id="sugestoes" hidden></ul>
+      </div>
+    </div>
+    <div id="metricas" class="grupo metricas" data-campo="m" role="group" aria-label="O que o mapa mostra"></div>
+  </header>
+  <main>
+    <section class="mapa-area">
+      <div id="mapa"></div>
+      <div id="legenda"></div>
+      <div id="dica" hidden></div>
+      <div id="carregando">Carregando…</div>
+    </section>
+    <aside id="painel"></aside>
+  </main>
+</body>
+</html>

@@ -3,3 +3,4 @@ data/
 __pycache__/
 *.part
 vendor/tse/*.zip
+site/dados/

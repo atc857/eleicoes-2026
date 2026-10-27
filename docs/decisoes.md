@@ -4,8 +4,8 @@ Registro das decisões tomadas na sessão de planejamento de 26/10/2026. Inspira
 
 ## Produto
 
-- Pipeline de dados reprodutível (Parquet + DuckDB) + painel interativo local em **Streamlit**. Site público estático fica para evolução futura.
-- Uso pessoal, com saídas compartilháveis: toda tabela exporta CSV, todo gráfico/mapa exporta PNG (Plotly). Relatório estático fica para depois.
+- Pipeline de dados reprodutível (Parquet + DuckDB) + site estático de uso local (o painel Streamlit inicial foi substituído em 27/10/2026, ver "Site estático").
+- Uso pessoal e local. (A exportação de CSV/PNG do painel Streamlit não foi levada ao site.)
 - Código, colunas e documentação em português, seguindo a nomenclatura do TSE (`cd_municipio`, `qt_votos`…).
 - Stack: `uv`, Python 3.13 (o 3.14 teve problemas de wheels no projeto anterior), Parquet + DuckDB, CLI com `baixar`, `processar`, `atualizar`. Repositório git nesta pasta.
 
@@ -44,7 +44,7 @@ Registro das decisões tomadas na sessão de planejamento de 26/10/2026. Inspira
 
 ## Mapas e visual
 
-- Coropléticos Plotly, malha simplificada com `shapely.coverage_simplify` (sem `set_precision`/`make_valid`).
+- Coropléticos (MapLibre no site), malha simplificada com `shapely.coverage_simplify` (sem `set_precision`/`make_valid`).
 - Diferença PT × PL: escala divergente vermelho (PT) ↔ azul (PL), claro = pequena, escuro = grande, cinza perto de zero. Métricas não partidárias: outro par divergente (roxo ↔ verde).
 - Paleta do projeto anterior (PT vermelho, PL azul, 5 categóricas validadas para daltonismo), temas claro/escuro.
 
@@ -75,11 +75,12 @@ Registro das decisões tomadas na sessão de planejamento de 26/10/2026. Inspira
 
 ## Etapas
 
-1. Pipeline municipal 2022 + 2026 (CSV + API) com testes de totais
-2. Comparação Presidente + painel (páginas 1–3)
-3. DF por RA
-4. Decodificador de BU (DF 2ºt 2026)
-5. Outros cargos e exterior (páginas 4–5)
+1. Pipeline municipal 2022 + 2026 (CSV + API) com testes de totais — **feito**
+2. Comparação Presidente + painel (páginas 1–3) — **feito**
+3. DF por RA — **feito**
+4. Decodificador de BU (DF 2ºt 2026) — **feito**
+5. Outros cargos e exterior (páginas 4–5) — **feito** (no site estático)
+6. Site estático substitui o Streamlit — **feito** (uso local)
 
 ## Notas de implementação
 
@@ -99,3 +100,26 @@ Registro das decisões tomadas na sessão de planejamento de 26/10/2026. Inspira
   com a totalização oficial (Presidente e Governador). Linhas com `fonte = bu:3221`.
 - `atualizar`, quando o CSV oficial do 2º turno sair: troca API/BU pelo CSV e grava
   `conferencia_bu_csv_df_2t_2026.csv` com as divergências seção a seção (vazio = tudo confere).
+
+## Site estático (27/10/2026)
+
+- O Streamlit ficou lento: cada clique roda a página inteira no Python e o Plotly redesenha a malha toda.
+  Trocado por um **site estático**: `uv run boletim-urna site --servir` (exporta e abre em http://localhost:8000).
+- `site_estatico.py` exporta `site/dados/` (gitignorado, ~49 MB em 153 arquivos):
+  - `unidades`, `malha` (GeoJSON, `promoteId` = id_geo), `ufs` (contornos: segmentos não compartilhados;
+    união de polígonos falha nesta malha), `indice` (corridas disponíveis);
+  - `c{cargo}_{ano}_{turno}`: participação por unidade + candidatos (majoritários) ou partidos (proporcionais), votos esparsos;
+  - `c{cargo}_{ano}_{turno}_{UF}`: candidatos a deputado da UF, só carregado ao escolher a UF (SP: 370 KB gzip);
+  - `ficha_{UF}`: participação de todas as corridas e os 10 mais votados de cada cargo por unidade.
+- Deputado Distrital (8) entra como cargo 7, "Deputado Estadual/Distrital". Votos anulados ficam fora dos candidatos.
+  Total do partido = nominais válidos dos candidatos + legenda (a tabela de partidos das RAs não traz nominais);
+  confere com `qt_votos_validos` em todas as corridas (teste).
+- Página em HTML + módulos JS sem build (`site/js/`), MapLibre GL 4.7.1 via CDN. Trocar ano/turno/métrica só muda
+  `feature-state` (cor), sem redesenhar a malha. Estado inteiro na URL (`#v=c&turno=1&uf=DF&m=viradas&u=DF-RA28`).
+- Vistas: **Resultados** (qualquer cargo/ano/turno; mapa de mais votado, % do candidato, % do partido, saldo PT − PL,
+  variação desde 2022, participação) e **Comparação 2022 × 2026** (Presidente: diferenças, viradas, dispersão,
+  rankings). A **ficha** abre no painel lateral nas duas vistas.
+- Cores categóricas: PT e PL fixos; os três partidos que mais vencem no recorte ganham amarelo/verde/roxo; o resto, cinza neutro.
+- Turno padrão: 2º para Presidente, 1º para os demais cargos (2º turno de governador só em algumas UFs).
+- Medido localmente: trocas de botão 5–210 ms (o pior: deputados de SP, 1.650 linhas na tabela).
+- Uso só local (decisão do usuário, 27/10/2026): sem hospedagem pública. O painel Streamlit (`app/`) foi removido.

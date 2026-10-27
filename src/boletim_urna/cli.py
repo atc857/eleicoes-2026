@@ -1,4 +1,4 @@
-"""Linha de comando: `boletim-urna baixar | processar | atualizar`."""
+"""Linha de comando: `boletim-urna baixar | processar | atualizar | site`."""
 
 import logging
 import zipfile
@@ -6,7 +6,8 @@ import zipfile
 import typer
 
 from . import baixar as _baixar
-from . import comparacao, df_ra, fontes, processar as _processar, unidades
+from . import comparacao, df_ra, fontes, unidades
+from . import processar as _processar
 
 app = typer.Typer(help="Pipeline de resultados eleitorais 2022 × 2026 (TSE).", no_args_is_help=True)
 
@@ -101,9 +102,31 @@ def comparar() -> None:
 
 
 @app.command()
-def painel() -> None:
-    """Abre o painel Streamlit."""
-    import subprocess
-    import sys
+def site(
+    servir: bool = typer.Option(False, help="Serve a pasta site/ e abre o navegador depois de exportar."),
+    porta: int = typer.Option(8000),
+) -> None:
+    """Exporta os dados do site estático (site/dados/); com --servir, abre em http://localhost:PORTA."""
+    from . import site_estatico
 
-    subprocess.run([sys.executable, "-m", "streamlit", "run", str(fontes.RAIZ / "app" / "painel.py")], check=False)
+    for linha in site_estatico.exportar():
+        typer.echo(linha)
+    if not servir:
+        return
+    import functools
+    import http.server
+    import webbrowser
+
+    class SemCache(http.server.SimpleHTTPRequestHandler):
+        """Revalida a cada carga: depois de reexportar, o navegador não fica com dados ou JS velhos."""
+
+        def end_headers(self) -> None:
+            self.send_header("Cache-Control", "no-cache")
+            super().end_headers()
+
+    manipulador = functools.partial(SemCache, directory=site_estatico.SITE)
+    with http.server.ThreadingHTTPServer(("127.0.0.1", porta), manipulador) as servidor:
+        url = f"http://localhost:{porta}/"
+        typer.echo(f"Servindo {url} (Ctrl+C para parar)")
+        webbrowser.open(url)
+        servidor.serve_forever()
